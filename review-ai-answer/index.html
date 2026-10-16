@@ -1,0 +1,309 @@
+<title>Review the AI's Answer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@500&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Layout: a single centered column. Intro with learning objectives, then one scene at a time:
+     the customer message, the AI draft, the knowledge base excerpt, and three choices. */
+  :root {
+    color-scheme: dark;
+    --bg: #030918; --surface: #0A1530; --ink: #F0F6FF; --muted: #A2B4DA; --line: #1C3262;
+    --accent: #4DE3FF; --accent-ink: #00141A; --accent-soft: #0A2B3D;
+    --good: #3DF0A8; --good-soft: #0A2F2A; --warn: #FFB347; --warn-soft: #3A2A0A; --bad: #FF7A8A; --bad-soft: #3A1222;
+    --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+    --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 17px; line-height: 1.6;
+    padding-block: 32px 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 760px; margin-inline: auto; display: grid; gap: 24px; }
+  h1, h2, h3 { font-family: var(--font-display); line-height: 1.12; margin: 0; text-wrap: balance; }
+  p { margin: 0; }
+  a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+  .mono { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .muted { color: var(--muted); }
+
+  header.top h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: -.02em; margin-block: 10px 12px; }
+  header.top p.sub { font-size: 1.1rem; max-width: 56ch; }
+  .objectives { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 8px; }
+  .objectives ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+
+  .btn { font: 600 15px/1 var(--font-body); padding: 13px 18px; border-radius: 6px; border: 1.5px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer; width: fit-content; }
+  .btn.ghost { background: transparent; color: var(--accent); }
+  .btn:hover { filter: brightness(1.06); }
+  .btn:not(.ghost) { box-shadow: 0 0 22px rgba(77,227,255,.3); }
+
+  .progress { display: grid; gap: 8px; }
+  .bar { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); width: 0; }
+  .meta { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px; display: grid; gap: 18px; }
+  .card h2 { font-size: 1.5rem; }
+  .block { display: grid; gap: 6px; }
+  .block .label { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .customer { border-left: 3px solid var(--accent); padding: 2px 0 2px 16px; font-size: 1.05rem; }
+  .draft { background: var(--bg); border: 1px dashed var(--muted); border-radius: 8px; padding: 14px 16px; }
+  details.kb { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+  details.kb summary { cursor: pointer; font-weight: 600; }
+  details.kb ul { margin: 10px 0 2px; padding-left: 20px; display: grid; gap: 4px; color: var(--ink); }
+
+  .choices { display: grid; gap: 10px; }
+  .choice { text-align: left; font: 500 16px/1.45 var(--font-body); color: var(--ink); background: var(--bg); border: 1.5px solid var(--line); border-radius: 8px; padding: 14px 16px; cursor: pointer; }
+  .choice:hover:not([disabled]) { border-color: var(--accent); background: var(--accent-soft); }
+  .choice[disabled] { cursor: default; opacity: .7; }
+  .choice.picked { opacity: 1; border-color: var(--accent); background: var(--accent-soft); }
+
+  .result { border-radius: 8px; padding: 14px 16px; display: grid; gap: 6px; }
+  .result.strong { background: var(--good-soft); color: var(--good); }
+  .result.mixed { background: var(--warn-soft); color: var(--warn); }
+  .result.weak { background: var(--bad-soft); color: var(--bad); }
+  .result strong { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; }
+  .result p { color: var(--ink); }
+
+  .summary-grid { display: grid; gap: 8px; }
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: baseline; padding-block: 8px; border-bottom: 1px solid var(--line); }
+  .chip { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; }
+  .chip.strong { background: var(--good-soft); color: var(--good); }
+  .chip.mixed { background: var(--warn-soft); color: var(--warn); }
+  .chip.weak { background: var(--bad-soft); color: var(--bad); }
+  .habits { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+  .score { font-family: var(--font-display); font-size: 2.6rem; font-weight: 700; color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums; }
+  footer { font-size: 14px; color: var(--muted); }
+  /* light blue glow accents */
+  .card { box-shadow: 0 0 0 1px rgba(77,227,255,.18), 0 0 36px rgba(77,227,255,.08); }
+  .objectives { box-shadow: 0 0 0 1px rgba(77,227,255,.16), 0 0 28px rgba(77,227,255,.07); }
+  .bar i { box-shadow: 0 0 12px rgba(77,227,255,.8); }
+  .customer { box-shadow: -6px 0 14px -8px rgba(77,227,255,.9); }
+  .draft { border-color: var(--accent); border-style: solid; box-shadow: 0 0 18px rgba(77,227,255,.22), inset 0 0 14px rgba(77,227,255,.06); }
+  details.kb[open] { box-shadow: 0 0 14px rgba(77,227,255,.12); }
+  .choice:hover:not([disabled]) { box-shadow: 0 0 16px rgba(77,227,255,.3); }
+  .choice.picked { box-shadow: 0 0 20px rgba(77,227,255,.4); }
+  .score { text-shadow: 0 0 22px rgba(77,227,255,.55); }
+  header.top h1 { text-shadow: 0 0 28px rgba(77,227,255,.25); }
+  @media (prefers-reduced-motion: no-preference) { .bar i { transition: width .25s; } .choice, .btn { transition: background-color .15s, border-color .15s, filter .15s; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <p class="mono">Decision scenario for support agents</p>
+    <h1>Review the AI's answer</h1>
+    <p class="sub">At Northlight, an AI assistant named Adelaide drafts replies to customers. You decide whether each draft goes out as written, gets edited, or goes to someone else. Five scenes, about five minutes.</p>
+  </header>
+
+  <div class="objectives">
+    <p class="mono">Learning objectives</p>
+    <p>By the end you can:</p>
+    <ul>
+      <li>Compare an AI draft with the source before it reaches a customer</li>
+      <li>Match how confident a reply sounds to what the evidence supports</li>
+      <li>Choose between sending, editing, and escalating, and tell customers the truth either way</li>
+    </ul>
+  </div>
+
+  <div id="stage"></div>
+
+  <footer>Designed by Daniel Cooperider. Northlight, Adelaide, and every policy shown here are fictional and were invented for this demonstration. They are not real policies or advice.</footer>
+</div>
+
+<script>
+(function () {
+  var SCENES = [
+    {
+      title: "A simple export question",
+      customer: "\u201cHow do I download my chat history? I\u2019m switching jobs and want a copy.\u201d",
+      draft: "You can export your chats from Settings > Data > Export. We\u2019ll email you a download link within 24 hours.",
+      kb: ["Export: Settings > Data > Export.", "A download link is emailed within 24 hours.", "Available on all plans."],
+      options: [
+        { t: "Send the draft as written. It matches the knowledge base on the menu path, the 24 hour email, and availability, so nothing needs changing and the customer gets the answer right away.", r: "strong", res: "The draft matches the knowledge base line for line, so editing it would only slow the customer down.", why: "Good judgment includes knowing when to change nothing." },
+        { t: "Rewrite the reply in your own words so it sounds more personal. You would keep the same menu path and timing, and add a friendly line about the customer\u2019s job change at the start.", r: "mixed", res: "The reply works, but you spent time rewriting an answer that was already right. Across a full queue, that adds up.", why: "Check the draft against the source first, then edit only what is wrong." },
+        { t: "Escalate the question to a specialist before replying. The customer is switching jobs and may be in a hurry, so you want someone senior to confirm the export steps before anything goes out.", r: "weak", res: "The customer waits longer for an answer the knowledge base already covers, and the specialist\u2019s time goes to a routine question.", why: "Escalate when stakes are high or the source is silent." }
+      ]
+    },
+    {
+      title: "A memory promise",
+      customer: "\u201cDoes Adelaide remember what I told it last week? I don\u2019t want to repeat myself.\u201d",
+      draft: "Yes! Adelaide remembers everything you tell it, permanently, so you never have to repeat yourself.",
+      kb: ["Memory is optional and off by default.", "Users can turn memory on in Settings.", "Saved memories can be viewed and deleted at any time.", "Memory does not include conversations from before it was turned on."],
+      options: [
+        { t: "Send the draft as written. Adelaide sounds friendly and confident, and the customer\u2019s main worry is repeating themselves, so a clear yes answers the question they asked.", r: "weak", res: "The draft promises permanent, complete memory. The customer will expect something the product does not do, and will write back upset the first time it forgets.", why: "Confident wording is not evidence. The knowledge base says memory is optional and limited." },
+        { t: "Edit the draft to match the knowledge base. Say that memory is optional and off by default, explain how to turn it on in Settings, and mention that saved memories can be viewed and deleted.", r: "strong", res: "The customer gets an accurate answer with a next step. You could also add that conversations from before memory was turned on are not included, which covers last week\u2019s chat.", why: "Fix the claim, keep the helpful tone." },
+        { t: "Escalate to the product team and hold the reply. Memory claims can be sensitive, so you ask them to confirm what Adelaide remembers before telling the customer anything about it.", r: "mixed", res: "It is a safe choice, but unnecessary. The answer is in the knowledge base and you could have corrected the draft yourself.", why: "Escalation should add information. Here it only adds delay." }
+      ]
+    },
+    {
+      title: "A data question",
+      customer: "\u201cIs my data used to train your models? I\u2019m on the Free plan.\u201d",
+      draft: "No. Your data is never used to train our models.",
+      kb: ["Free plan: conversations may be used to improve models unless the user opts out in Settings > Privacy.", "Business plan: conversations are not used for training."],
+      options: [
+        { t: "Send the draft as written. It is short and direct, the customer asked a yes or no question, and a clear no is the reassurance they are looking for.", r: "weak", res: "The draft contradicts the knowledge base for the Free plan. A wrong answer about data use damages trust and may create legal exposure.", why: "A short, certain answer on a sensitive topic deserves the closest check." },
+        { t: "Flag the draft to your team lead and hold the reply until they respond. Data questions are sensitive, so you want a second opinion before telling the customer anything about training.", r: "mixed", res: "The flag is reasonable, but the knowledge base already answers this, and the customer is left waiting. You can reply now and still flag the draft.", why: "Do both. Report the problem, and still answer the customer." },
+        { t: "Edit the reply to give the Free plan policy: conversations may be used to improve models unless the customer opts out in Settings > Privacy. Mention that the Business plan works differently.", r: "strong", res: "The customer gets the real policy for their plan, plus the control they asked about.", why: "Answer for the customer\u2019s situation, not the general case." }
+      ]
+    },
+    {
+      title: "A medication question",
+      customer: "\u201cHal gave me a dosage for my child\u2019s cold medicine. Can you confirm it\u2019s right?\u201d",
+      draft: "Yes, that dosage is correct. You\u2019re all set.",
+      kb: ["Adelaide is not a medical professional.", "Agents must never confirm medical dosages.", "Direct the customer to a pharmacist or doctor.", "Report the exchange to Trust & Safety using the Safety form."],
+      options: [
+        { t: "Submit the Safety form so Trust & Safety can review what Adelaide said, and pause the conversation with the customer until you hear back from them about how to respond.", r: "mixed", res: "The report is right, but the customer may act on the earlier answer while waiting. Send a clear reply as well.", why: "Reporting and replying are both part of the job." },
+        { t: "Send the draft as written. The customer is worried and wants a quick yes, and the earlier dosage may well be right, so confirming it keeps things moving and reassures them.", r: "weak", res: "The draft confirms medical information nobody on the team can verify. That is a safety risk to a child and a serious risk to the company.", why: "When stakes are high, no draft goes out without the source." },
+        { t: "Replace the draft. Tell the customer you can\u2019t confirm dosages, suggest they ask a pharmacist or their child\u2019s doctor, and submit the Safety form so Trust & Safety can review what Adelaide said.", r: "strong", res: "The customer is pointed to the right person, the earlier answer is not reinforced, and Trust & Safety can review what Adelaide said.", why: "Protect the customer first, then report." }
+      ]
+    },
+    {
+      title: "A refund promise",
+      customer: "\u201cYour assistant told me I\u2019d get a refund for the last three months. Where is it?\u201d",
+      draft: "I\u2019ve processed your refund for the last three months. You\u2019ll see it in 3 to 5 days.",
+      kb: ["The assistant cannot process refunds. Agents cannot promise refunds.", "Refund requests within 14 days of a charge are reviewed by Billing, who respond within 2 business days.", "Older charges are reviewed case by case."],
+      options: [
+        { t: "Tell the customer the charges are too old to refund and offer to answer any other questions. The window is 14 days, so this sets the expectation early and avoids a false promise.", r: "mixed", res: "It sounds decisive, but the policy says older charges are reviewed case by case. You would close the door on something Billing might approve.", why: "Don\u2019t add a rule the policy doesn\u2019t contain." },
+        { t: "Edit the reply. Apologize for the confusion, say you can\u2019t confirm a refund, submit a billing review request, and explain that recent charges are reviewed within 2 business days and older ones case by case.", r: "strong", res: "The customer hears the truth, knows what happens next, and Billing gets the request. You promised nothing the policy doesn\u2019t support.", why: "Be honest about what you can\u2019t promise, and route the customer to who can help." },
+        { t: "Send the draft as written. It sounds helpful, the customer already expects a refund, and a clear timeline of 3 to 5 days gives them something concrete to look for in their account.", r: "weak", res: "The draft claims a refund that has not happened. In a few days the customer will check their account and find nothing.", why: "A false promise costs more than a slow answer." }
+      ]
+    }
+  ];
+
+  var POINTS = { strong: 2, mixed: 1, weak: 0 };
+  var LABEL = { strong: "Good choice", mixed: "OK choice, but there is a better option", weak: "Incorrect" };
+  var CHIP = { strong: "Good choice", mixed: "OK choice", weak: "Incorrect" };
+  var stage = document.getElementById("stage");
+  var idx = 0, picks = [];
+
+  function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+  function block(label, node) { var b = el("div", "block"); b.appendChild(el("p", "label", label)); b.appendChild(node); return b; }
+
+  function start() {
+    stage.innerHTML = "";
+    var c = el("div", "card");
+    c.appendChild(el("h2", "", "Ready?"));
+    c.appendChild(el("p", "muted", "For each scene you will see the customer’s message, Adelaide’s draft, and the relevant knowledge base entry. Pick what you would do."));
+    var b = el("button", "btn", "Start scene 1");
+    b.type = "button";
+    b.addEventListener("click", function () { idx = 0; picks = []; scene(); });
+    c.appendChild(b);
+    stage.appendChild(c);
+  }
+
+  function scene() {
+    var s = SCENES[idx];
+    s.order = shuffle(s.options.slice());
+    stage.innerHTML = "";
+
+    var prog = el("div", "progress");
+    var meta = el("div", "meta");
+    meta.appendChild(el("span", "mono", "Scene " + (idx + 1) + " of " + SCENES.length));
+    meta.appendChild(el("span", "mono", s.title));
+    prog.appendChild(meta);
+    var bar = el("div", "bar"); var fill = document.createElement("i"); fill.style.width = (idx / SCENES.length * 100) + "%"; bar.appendChild(fill);
+    prog.appendChild(bar);
+    stage.appendChild(prog);
+
+    var card = el("div", "card");
+    card.setAttribute("aria-live", "polite");
+    card.appendChild(block("Customer message", el("p", "customer", s.customer)));
+    card.appendChild(block("Adelaide’s draft reply", el("p", "draft", s.draft)));
+
+    var d = el("details", "kb"); d.open = true;
+    d.appendChild(el("summary", "", "Knowledge base entry"));
+    var ul = el("ul"); s.kb.forEach(function (k) { ul.appendChild(el("li", "", k)); }); d.appendChild(ul);
+    card.appendChild(d);
+
+    card.appendChild(el("p", "label mono", "What do you do?"));
+    var choices = el("div", "choices");
+    var buttons = [];
+    s.order.forEach(function (o, i) {
+      var b = el("button", "choice", o.t); b.type = "button";
+      b.addEventListener("click", function () { choose(i, buttons, card); });
+      buttons.push(b); choices.appendChild(b);
+    });
+    card.appendChild(choices);
+    stage.appendChild(card);
+  }
+
+  function choose(i, buttons, card) {
+    var s = SCENES[idx], o = s.order[i];
+    picks[idx] = o.r;
+    buttons.forEach(function (b, k) { b.disabled = true; if (k === i) b.classList.add("picked"); });
+    var r = el("div", "result " + o.r);
+    r.appendChild(el("strong", "", LABEL[o.r]));
+    r.appendChild(el("p", "", o.res));
+    r.appendChild(el("p", "muted", o.why));
+    card.appendChild(r);
+    var last = idx === SCENES.length - 1;
+    var n = el("button", "btn", last ? "See your results" : "Next scene"); n.type = "button";
+    n.addEventListener("click", function () { if (last) summary(); else { idx++; scene(); window.scrollTo(0, 0); } });
+    card.appendChild(n);
+    n.focus({ preventScroll: true });
+    r.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  var PASS = 8, CRITICAL = 3;
+  var FOCUS = [
+    ["A simple export question", "Check the draft against the source first. If it matches, send it as written and move on."],
+    ["A memory promise", "Treat confident wording as a reason to look closer. Match the claim to what the knowledge base supports."],
+    ["A data question", "Answer for the customer\u2019s situation, such as their plan, and give the control they asked about."],
+    ["A medication question", "When health or safety is involved, no draft goes out unchecked. Reply with a referral, and report the exchange."],
+    ["A refund promise", "Be honest about what you can\u2019t promise, explain the policy, and route the customer to who can help."]
+  ];
+
+  function summary() {
+    stage.innerHTML = "";
+    var total = picks.reduce(function (a, p) { return a + POINTS[p]; }, 0), max = SCENES.length * 2;
+    var critical = picks[CRITICAL] === "weak";
+    var passed = total >= PASS && !critical;
+    var card = el("div", "card");
+    card.appendChild(el("p", "mono", "Your results"));
+    var top = el("div", "row"); top.appendChild(el("span", "score", total + " / " + max));
+    top.appendChild(el("span", "chip " + (passed ? "strong" : "weak"), passed ? "Passed" : "Not yet")); card.appendChild(top);
+    card.appendChild(el("p", "muted", "Passing score: " + PASS + " of " + max + ", with no Incorrect answer on the medication scene."));
+    var msg = passed ? "You checked each draft against the source and matched your response to the risk." :
+              critical ? "The medication scene is a safety scene, so an Incorrect answer there means another try, even with a high score." :
+              total >= 6 ? "You are close. Look at the scenes marked Incorrect or OK choice, then try again." :
+                           "A few drafts went out that shouldn\u2019t have. Try again and compare each draft with the knowledge base line by line before choosing.";
+    card.appendChild(el("p", "", msg));
+    var g = el("div", "summary-grid");
+    SCENES.forEach(function (sc, i) {
+      var row = el("div", "row"); row.appendChild(el("span", "", (i + 1) + ". " + sc.title));
+      row.appendChild(el("span", "chip " + picks[i], CHIP[picks[i]])); g.appendChild(row);
+    });
+    card.appendChild(g);
+
+    card.appendChild(el("h3", "", "Now you should be able to"));
+    var o = el("ul", "habits");
+    ["Compare an AI draft with the source before it reaches a customer.", "Match how confident a reply sounds to what the evidence supports.", "Choose between sending, editing, and escalating, and tell customers the truth either way."].forEach(function (t) { o.appendChild(el("li", "", t)); });
+    card.appendChild(o);
+
+    var h = el("ol", "habits");
+    if (passed) {
+      card.appendChild(el("h3", "", "Three habits to keep"));
+      ["Check the draft against the source before you send it.", "Treat confident wording as a reason to look closer, especially on data, health, and money.", "Escalate when stakes are high or the source is silent, and still give the customer a clear reply."].forEach(function (t) { h.appendChild(el("li", "", t)); });
+    } else {
+      card.appendChild(el("h3", "", "Habits to work on"));
+      var order = [CRITICAL].concat([0, 1, 2, 3, 4].filter(function (i) { return i !== CRITICAL; }));
+      var shown = 0;
+      order.forEach(function (i) {
+        if (picks[i] === "strong" || shown >= 3) return;
+        var li = el("li"); var st = el("strong", "", FOCUS[i][0] + ": "); li.appendChild(st); li.appendChild(document.createTextNode(FOCUS[i][1])); h.appendChild(li); shown++;
+      });
+    }
+    card.appendChild(h);
+    var b = el("button", "btn ghost", passed ? "Practice again" : "Try again"); b.type = "button";
+    b.addEventListener("click", function () { start(); window.scrollTo(0, 0); });
+    card.appendChild(b);
+    stage.appendChild(card);
+    window.scrollTo(0, 0);
+  }
+
+  start();
+})();
+</script>

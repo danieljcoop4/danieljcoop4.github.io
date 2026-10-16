@@ -1,0 +1,311 @@
+<title>Fundly Transfer App</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@500&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Single dark look by choice: deep navy ground, neon lime accent, neon yellow secondary. Layout: a short intro and demo controls above, a phone-sized app below. The app has three tabs
+     (Main menu, Transfer funds, Activity). Everything here is fictional: bank, balances, and rules. */
+  :root {
+    color-scheme: dark;
+    --bg: #030918; --surface: #0A1530; --ink: #F0F6FF; --muted: #A2B4DA; --line: #1C3262;
+    --accent: #B8FF2C; --accent-ink: #0A1400; --accent-soft: #14300F; --cyan: #FFF23D; --cyan-soft: #2B2B08;
+    --ok: #3DF0A8; --ok-soft: #0A2F2A; --warn: #FFB347; --warn-soft: #3A2A0A; --bad: #FF7A8A; --bad-soft: #3A1222;
+    --shell: #000000;
+    --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+    --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5;
+    padding-block: 28px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  h1, h2, h3 { font-family: var(--font-display); margin: 0; line-height: 1.12; text-wrap: balance; }
+  p { margin: 0; }
+  button, input, select { font: inherit; color: inherit; }
+  button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .mono { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .muted { color: var(--muted); }
+
+  .page { max-width: 880px; margin-inline: auto; display: grid; gap: 28px; }
+  .intro { display: grid; gap: 10px; max-width: 62ch; }
+  .intro h1 { font-size: clamp(1.9rem, 5.5vw, 2.8rem); letter-spacing: -.02em; }
+  .stagewrap { display: grid; gap: 28px; grid-template-columns: 1fr; align-items: start; }
+  @media (min-width: 820px) { .stagewrap { grid-template-columns: 320px minmax(0, 1fr); } }
+  .controls { display: grid; gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .seg button { padding: 10px 8px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--bg); cursor: pointer; font-weight: 600; font-size: 14px; }
+  .seg button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .rules { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; color: var(--muted); }
+  .link { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; font-size: 14px; width: fit-content; }
+
+  /* phone */
+  .phone { width: 100%; max-width: 380px; margin-inline: auto; background: var(--shell); border-radius: 36px; padding: 10px; box-shadow: 0 0 0 1px var(--line), 0 0 60px rgba(184,255,44,.28), 0 0 0 1px rgba(184,255,44,.35); }
+  .screen { background: var(--surface); border-radius: 28px; overflow: hidden; display: grid; grid-template-rows: auto 1fr auto; height: 640px; }
+  .status { display: flex; justify-content: space-between; padding: 12px 22px 4px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .view { overflow-y: auto; padding: 8px 20px 20px; display: grid; gap: 16px; align-content: start; }
+  .view h2 { font-size: 1.5rem; }
+  .brand { font-family: var(--font-display); font-weight: 700; color: var(--accent); font-size: 1.1rem; }
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); }
+  .tabs button { padding: 12px 6px 14px; background: none; border: 0; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .tabs button[aria-current="page"] { color: var(--accent); box-shadow: inset 0 3px 0 var(--accent); }
+
+  .menu { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tile { text-align: left; display: grid; gap: 4px; padding: 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); cursor: pointer; align-content: start; }
+  .tile b { font-family: var(--font-display); font-size: 1.05rem; }
+  .tile span { font-size: 12px; color: var(--muted); }
+  .tile:not(.off):hover { border-color: var(--accent); }
+  .tile:not(.off) b { color: var(--accent); }
+  .tile.off { opacity: .55; cursor: default; }
+  .acct { border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 4px; }
+  .acct .name { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; }
+  .acct .last4 { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+  .bal { font-family: var(--font-display); font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .sub { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .cta { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 12px; padding: 15px 16px; font-weight: 600; cursor: pointer; width: 100%; }
+  .cta.ghost { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+  .cta[disabled] { opacity: .5; cursor: default; }
+
+  label.f { display: grid; gap: 6px; font-size: 13px; font-weight: 600; }
+  select, input[type="text"], input[type="number"] { width: 100%; padding: 12px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); font-size: 16px; }
+  .amt { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 6px; border: 1.5px solid var(--line); border-radius: 10px; padding: 4px 12px; background: var(--bg); }
+  .amt span { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; }
+  .amt input { border: 0; background: none; padding: 8px 0; font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .amt input:focus-visible { outline: none; }
+  .amt:focus-within { border-color: var(--accent); }
+  .err { color: var(--bad); font-size: 14px; min-height: 1.2em; }
+  .swap { justify-self: center; background: var(--accent-soft); color: var(--accent); border: 0; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+  .rev { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .rev div { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 15px; }
+  .rev div:last-child { border-bottom: 0; }
+  .rev b { font-variant-numeric: tabular-nums; text-align: right; }
+  .note { border-radius: 10px; padding: 12px 14px; font-size: 14px; }
+  .note.info { background: var(--cyan-soft); color: var(--ink); }
+  .note.warn { background: var(--warn-soft); color: var(--ink); }
+  .done { text-align: center; display: grid; gap: 10px; justify-items: center; padding-top: 18px; }
+  .check { width: 56px; height: 56px; border-radius: 50%; background: var(--ok-soft); color: var(--ok); display: grid; place-items: center; font-size: 28px; font-weight: 700; }
+  .check.later { background: var(--warn-soft); color: var(--warn); }
+
+  .tx { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .tx .t { font-weight: 600; }
+  .tx .a { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+  .tx .a.pos { color: var(--ok); }
+  .chip { font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; width: fit-content; }
+  .chip.posted { background: var(--ok-soft); color: var(--ok); }
+  .chip.pending { background: var(--warn-soft); color: var(--warn); }
+  .chip.scheduled { background: var(--cyan-soft); color: var(--cyan); }
+  .tx .cancel { grid-column: 1 / -1; justify-self: start; margin-top: 6px; }
+  footer { font-size: 14px; color: var(--muted); max-width: 70ch; }
+  @media (prefers-reduced-motion: no-preference) { .cta, .seg button { transition: filter .15s, background-color .15s; } }
+</style>
+
+<div class="page">
+  <header class="intro">
+    <p class="mono">Clickable prototype</p>
+    <h1>Fundly: move money between your accounts</h1>
+    <p>A prototype of a mobile banking transfer flow, with a fictional bank and invented rules. Try a transfer, then switch the time of day to see how the 8:00 PM cutoff changes what the customer is told.</p>
+  </header>
+
+  <div class="stagewrap">
+    <aside class="controls" aria-label="Demo controls">
+      <div>
+        <p class="mono" style="margin-bottom:8px">Demo time (Thursday, Oct 15)</p>
+        <div class="seg" role="group" aria-label="Time of day">
+          <button type="button" id="t-aft" aria-pressed="true">2:30 PM ET</button>
+          <button type="button" id="t-eve" aria-pressed="false">9:15 PM ET</button>
+        </div>
+      </div>
+      <div>
+        <p class="mono" style="margin-bottom:8px">Invented rules</p>
+        <ul class="rules">
+          <li>Transfers between your own accounts made before 8:00 PM ET arrive instantly.</li>
+          <li>After 8:00 PM ET they arrive the next business day by 6:00 AM ET.</li>
+          <li>Limit: $5,000 per day.</li>
+          <li>Money you move out is held right away, even when it arrives later.</li>
+        </ul>
+      </div>
+      <button type="button" class="link" id="reset">Reset the demo</button>
+    </aside>
+
+    <div class="phone">
+      <div class="screen">
+        <div class="status"><span id="clock">2:30 PM</span><span>Fundly</span></div>
+        <div class="view" id="view" aria-live="polite"></div>
+        <nav class="tabs" aria-label="App sections">
+          <button type="button" data-go="home">Main menu</button>
+          <button type="button" data-go="move">Transfer funds</button>
+          <button type="button" data-go="activity">Activity</button>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <footer>Fundly is a fictional bank. Names, balances, and rules were invented for this demonstration and do not describe a real product, real policies, or financial advice. Designed by Daniel Cooperider.</footer>
+</div>
+
+<script>
+(function () {
+  var fmt = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+  var DAILY_LIMIT = 5000;
+
+  function fresh() {
+    return {
+      time: "aft", screen: "home", sentToday: 0, seq: 0,
+      acc: {
+        chk: { id: "chk", name: "Everyday Checking", last4: "4821", current: 790.78, pending: 42.18 },
+        sav: { id: "sav", name: "Savings", last4: "7390", current: 5310.25, pending: 0 }
+      },
+      draft: { from: "sav", to: "chk", amount: "", memo: "" },
+      err: "", last: null,
+      tx: [
+        { id: "t1", title: "Greenleaf Market", sub: "Debit card · Today", amt: -42.18, status: "pending" },
+        { id: "t2", title: "Payroll deposit", sub: "Direct deposit · Oct 14", amt: 1820.0, status: "posted" },
+        { id: "t3", title: "Corner Coffee", sub: "Debit card · Oct 13", amt: -6.45, status: "posted" },
+        { id: "t4", title: "Riverside Apartments", sub: "Bill pay · Oct 12", amt: -1150.0, status: "posted" }
+      ]
+    };
+  }
+  var S = fresh();
+  var view = document.getElementById("view");
+
+  function avail(a) { return a.current - a.pending; }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function instant() { return S.time === "aft"; }
+  function arrives() { return instant() ? "Today, instantly" : "Fri, Oct 16 by 6:00 AM ET"; }
+  function other(id) { return id === "chk" ? "sav" : "chk"; }
+
+  function render() {
+    document.getElementById("clock").textContent = instant() ? "2:30 PM" : "9:15 PM";
+    document.getElementById("t-aft").setAttribute("aria-pressed", instant());
+    document.getElementById("t-eve").setAttribute("aria-pressed", !instant());
+    document.querySelectorAll(".tabs button").forEach(function (b) {
+      var cur = (b.dataset.go === "home" && S.screen === "home") || (b.dataset.go === "move" && ["move", "review", "done"].indexOf(S.screen) > -1) || (b.dataset.go === "activity" && S.screen === "activity");
+      if (cur) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+    });
+    var h = { home: home, move: move, review: review, done: done, activity: activity }[S.screen]();
+    view.innerHTML = h;
+    bind();
+  }
+
+  function home() {
+    var c = S.acc.chk, s = S.acc.sav;
+    var tiles = [["move", "Transfer funds", "Between your accounts"], ["activity", "Activity", "Recent transactions"], ["x", "Pay bills", "Not in this prototype"], ["x", "Cards", "Not in this prototype"]];
+    return '<p class="brand">Fundly</p><h2>Main menu</h2><p class="sub">' + (instant() ? "Good afternoon" : "Good evening") + ', Alex</p>' +
+      card(c, true) + card(s, false) +
+      '<div class="menu">' + tiles.map(function (t) {
+        return t[0] === "x" ? '<button type="button" class="tile off" disabled><b>' + t[1] + '</b><span>' + t[2] + '</span></button>'
+          : '<button type="button" class="tile" data-go="' + t[0] + '"><b>' + t[1] + '</b><span>' + t[2] + '</span></button>';
+      }).join("") + '</div>';
+  }
+  function card(a, showHold) {
+    return '<div class="acct"><div class="name"><span>' + a.name + '</span><span class="last4">•••• ' + a.last4 + '</span></div>' +
+      '<div class="bal">' + fmt.format(avail(a)) + '</div><div class="sub">Available</div>' +
+      '<div class="sub">Current ' + fmt.format(a.current) + (a.pending ? ' · Pending −' + fmt.format(a.pending) : '') + '</div></div>';
+  }
+
+  function opts(sel) {
+    return Object.keys(S.acc).map(function (k) { var a = S.acc[k]; return '<option value="' + k + '"' + (k === sel ? " selected" : "") + '>' + a.name + ' •••• ' + a.last4 + ' (' + fmt.format(avail(a)) + ')</option>'; }).join("");
+  }
+  function move() {
+    var d = S.draft;
+    return '<h2>Transfer funds</h2>' +
+      '<label class="f">From<select id="from">' + opts(d.from) + '</select></label>' +
+      '<button type="button" class="swap" id="swap">Swap accounts</button>' +
+      '<label class="f">To<select id="to">' + opts(d.to) + '</select></label>' +
+      '<label class="f" for="amount">Amount</label><div class="amt"><span>$</span><input id="amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" value="' + esc(d.amount) + '"></div>' +
+      '<label class="f">Memo (optional)<input id="memo" type="text" maxlength="40" placeholder="For example, groceries" value="' + esc(d.memo) + '"></label>' +
+      '<p class="err" id="err" role="alert">' + esc(S.err) + '</p>' +
+      '<div class="note ' + (instant() ? "info" : "warn") + '">Arrives: <b>' + arrives() + '</b>' + (instant() ? '' : '<br>This is after the 8:00 PM ET cutoff for same-day transfers.') + '</div>' +
+      '<button class="cta" id="next">Review</button>';
+  }
+  function review() {
+    var d = S.draft, f = S.acc[d.from], t = S.acc[d.to], amt = parseFloat(d.amount);
+    return '<h2>Review your transfer</h2><div class="rev">' +
+      '<div><span>From</span><b>' + f.name + ' •••• ' + f.last4 + '</b></div>' +
+      '<div><span>To</span><b>' + t.name + ' •••• ' + t.last4 + '</b></div>' +
+      '<div><span>Amount</span><b>' + fmt.format(amt) + '</b></div>' +
+      '<div><span>Fee</span><b>$0.00</b></div>' +
+      '<div><span>Arrives</span><b>' + arrives() + '</b></div>' +
+      (d.memo ? '<div><span>Memo</span><b>' + esc(d.memo) + '</b></div>' : '') + '</div>' +
+      (instant() ? '' : '<div class="note warn">Money leaves ' + f.name + ' now, but will not show in ' + t.name + ' until it arrives.</div>') +
+      '<button class="cta" id="confirm">Confirm transfer</button><button class="cta ghost" id="edit">Edit</button>';
+  }
+  function done() {
+    var l = S.last;
+    return '<div class="done"><div class="check ' + (l.instant ? "" : "later") + '">' + (l.instant ? "✓" : "⏱") + '</div>' +
+      '<h2>' + (l.instant ? "Transfer complete" : "Transfer scheduled") + '</h2>' +
+      '<p>' + fmt.format(l.amt) + ' from ' + l.from + ' to ' + l.to + '</p>' +
+      '<p class="muted">' + (l.instant ? "It is available now." : "It will arrive Fri, Oct 16 by 6:00 AM ET.") + '</p>' +
+      '<p class="mono">Reference ' + l.ref + '</p></div>' +
+      '<button class="cta" data-go="activity">View activity</button><button class="cta ghost" data-go="home">Back to main menu</button>';
+  }
+  function activity() {
+    return '<h2>Activity</h2><div>' + S.tx.map(function (x) {
+      return '<div class="tx"><span class="t">' + esc(x.title) + '</span><span class="a ' + (x.amt > 0 ? "pos" : "") + '">' + (x.amt > 0 ? "+" : "−") + fmt.format(Math.abs(x.amt)) + '</span>' +
+        '<span class="sub">' + esc(x.sub) + '</span><span class="chip ' + x.status + '">' + x.status + '</span>' +
+        (x.status === "scheduled" ? '<button type="button" class="link cancel" data-cancel="' + x.id + '">Cancel this transfer</button>' : '') + '</div>';
+    }).join("") + '</div>';
+  }
+
+  function go(s) { S.screen = s; S.err = ""; render(); view.scrollTop = 0; }
+
+  function validate() {
+    var d = S.draft, amt = parseFloat(d.amount), f = S.acc[d.from];
+    if (!d.amount || isNaN(amt) || amt <= 0) return "Enter an amount greater than $0.";
+    if (Math.round(amt * 100) !== amt * 100 && String(d.amount).split(".")[1] && String(d.amount).split(".")[1].length > 2) return "Use dollars and cents, like 25.00.";
+    if (amt > avail(f)) return "You can move up to " + fmt.format(avail(f)) + " from " + f.name + ".";
+    if (S.sentToday + amt > DAILY_LIMIT) return "The daily limit is " + fmt.format(DAILY_LIMIT) + ". You can move " + fmt.format(Math.max(0, DAILY_LIMIT - S.sentToday)) + " more today.";
+    return "";
+  }
+
+  function bind() {
+    view.querySelectorAll("[data-go]").forEach(function (b) { b.addEventListener("click", function () { go(b.dataset.go); }); });
+    var from = document.getElementById("from"), to = document.getElementById("to"), amount = document.getElementById("amount"), memo = document.getElementById("memo");
+    if (from) {
+      from.addEventListener("change", function () { S.draft.from = from.value; S.draft.to = other(from.value); render(); });
+      to.addEventListener("change", function () { S.draft.to = to.value; S.draft.from = other(to.value); render(); });
+      amount.addEventListener("input", function () { S.draft.amount = amount.value; });
+      memo.addEventListener("input", function () { S.draft.memo = memo.value; });
+      document.getElementById("swap").addEventListener("click", function () { var f = S.draft.from; S.draft.from = S.draft.to; S.draft.to = f; render(); });
+      document.getElementById("next").addEventListener("click", function () {
+        S.draft.amount = amount.value; S.draft.memo = memo.value;
+        S.err = validate();
+        if (S.err) { document.getElementById("err").textContent = S.err; amount.focus(); } else go("review");
+      });
+    }
+    var confirm = document.getElementById("confirm");
+    if (confirm) {
+      document.getElementById("edit").addEventListener("click", function () { go("move"); });
+      confirm.addEventListener("click", function () {
+        var d = S.draft, amt = Math.round(parseFloat(d.amount) * 100) / 100, f = S.acc[d.from], t = S.acc[d.to];
+        S.seq++; var ref = "FW-" + (482100 + S.seq * 37);
+        S.sentToday += amt;
+        if (instant()) {
+          f.current = Math.round((f.current - amt) * 100) / 100; t.current = Math.round((t.current + amt) * 100) / 100;
+          S.tx.unshift({ id: "x" + S.seq, title: "Transfer: " + f.name + " to " + t.name, sub: "Today · " + ref, amt: amt, status: "posted" });
+        } else {
+          f.pending = Math.round((f.pending + amt) * 100) / 100;
+          S.tx.unshift({ id: "x" + S.seq, title: "Transfer: " + f.name + " to " + t.name, sub: "Arrives Fri, Oct 16 by 6:00 AM ET · " + ref, amt: amt, status: "scheduled", from: f.id, hold: amt });
+        }
+        S.last = { amt: amt, from: f.name, to: t.name, ref: ref, instant: instant() };
+        S.draft = { from: d.from, to: d.to, amount: "", memo: "" };
+        go("done");
+      });
+    }
+    view.querySelectorAll("[data-cancel]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var i = S.tx.findIndex(function (x) { return x.id === b.dataset.cancel; }), x = S.tx[i];
+        S.acc[x.from].pending = Math.round((S.acc[x.from].pending - x.hold) * 100) / 100;
+        S.sentToday = Math.max(0, S.sentToday - x.hold);
+        S.tx.splice(i, 1); render();
+      });
+    });
+  }
+
+  document.querySelectorAll(".tabs button").forEach(function (b) { b.addEventListener("click", function () { go(b.dataset.go); }); });
+  document.getElementById("t-aft").addEventListener("click", function () { S.time = "aft"; render(); });
+  document.getElementById("t-eve").addEventListener("click", function () { S.time = "eve"; render(); });
+  document.getElementById("reset").addEventListener("click", function () { S = fresh(); render(); });
+  render();
+})();
+</script>

@@ -1,0 +1,191 @@
+<title>Fundly Call Scenario</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@500&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Single dark look by choice: near-black violet ground, neon lime accent, neon yellow secondary. Layout: single reading column. Intro with objectives, then five call moments, one at a time, then a summary. */
+  :root {
+    color-scheme: dark;
+    --bg: #030918; --surface: #0A1530; --ink: #F0F6FF; --muted: #A2B4DA; --line: #1C3262;
+    --accent: #B8FF2C; --accent-ink: #0A1400; --accent-soft: #14300F; --cyan: #FFF23D; --cyan-soft: #2B2B08;
+    --ok: #3DF0A8; --ok-soft: #0A2F2A; --warn: #FFB347; --warn-soft: #3A2A0A; --bad: #FF7A8A; --bad-soft: #3A1222;
+    --shell: #000000;
+    --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+    --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55;
+    padding-block: 32px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  h1, h2, h3 { font-family: var(--font-display); margin: 0; line-height: 1.12; text-wrap: balance; }
+  p { margin: 0; }
+  button { font: inherit; color: inherit; }
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 720px; margin-inline: auto; display: grid; gap: 22px; }
+  .mono { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .muted { color: var(--muted); }
+  h1 { font-size: clamp(1.9rem, 5.5vw, 2.7rem); letter-spacing: -.02em; }
+  h2 { font-size: clamp(1.3rem, 3.6vw, 1.7rem); }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: grid; gap: 12px; }
+  .panel ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+  .cta { box-shadow: 0 0 22px rgba(184,255,44,.3); background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px; padding: 13px 20px; font-weight: 600; cursor: pointer; width: fit-content; }
+  .ghost { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+  .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--cyan)); }
+  .meta { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .ctx { background: var(--cyan-soft); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; font-size: 14px; }
+  .ctx b { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; font-weight: 500; }
+  .say { border-left: 4px solid var(--accent); padding: 4px 0 4px 16px; font-size: 1.08rem; }
+  .opts { display: grid; gap: 10px; }
+  .opt { text-align: left; background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px; padding: 14px 16px; cursor: pointer; line-height: 1.45; }
+  .opt:hover:not([disabled]) { border-color: var(--accent); }
+  .opt[disabled] { cursor: default; }
+  .opt.pick { border-width: 2px; }
+    .fb { border-radius: 10px; padding: 16px; display: grid; gap: 8px; }
+  .fb.strong { background: var(--ok-soft); } .fb.mixed { background: var(--warn-soft); } .fb.weak { background: var(--bad-soft); }
+  .fb .tag { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+  .score { font-family: var(--font-display); font-size: 3rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  footer { font-size: 14px; color: var(--muted); }
+</style>
+
+<div class="wrap" id="app"></div>
+
+<script>
+(function () {
+  var POINTS = { strong: 2, mixed: 1, weak: 0 };
+  var LABEL = { strong: "Strong move", mixed: "Partly right", weak: "Likely to backfire" };
+  var CASE = "Caller: Alex Rivera. Savings •••• 7390 and Everyday Checking •••• 4821. Time of call: 9:40 PM ET, Thursday. Fundly rule: transfers between a customer's own accounts after 8:00 PM ET arrive the next business day by 6:00 AM ET. The money leaves the sending account right away.";
+  var SCENES = [
+    {
+      title: "Open the call and verify",
+      ctx: "The caller sounds rushed. The account shows a $1,200 transfer from Savings to Checking at 9:15 PM, status Scheduled.",
+      say: "\"Hi, I just moved twelve hundred dollars from my savings to my checking and it's gone. It's not in checking. Where's my money?\"",
+      options: [
+        { t: "\"I can hear this is stressful, and I'm going to look into it right now. To get into your account I need to verify you first, so could you confirm your date of birth and the last four digits of the account you moved the money from?\"", r: "strong",
+          why: "You named the worry, promised action, and explained why you were asking. Verification stays in and feels like part of helping." },
+        { t: "\"I'm sorry about the worry, Alex. I see your name on the caller ID, so let me pull up your accounts and look at the recent activity right away. While I'm in there, roughly when did you make the transfer so I can find it quickly?\"", r: "weak",
+          why: "Warm, but you opened the account and started discussing activity before verifying. Caller ID is not verification. Verify first, every time." },
+        { t: "\"Thanks for calling Fundly. Before I can look at anything I'll need to verify your identity, so please give me your date of birth, the last four of your account number, and the email address on file. Then we'll go from there.\"", r: "mixed",
+          why: "Compliant and clear, but it skipped the customer's worry. Opening with one sentence of empathy would have lowered tension." }
+      ]
+    },
+    {
+      title: "Find the real cause",
+      ctx: "Alex is verified. You open the account. Savings shows $1,200 less. Checking shows no deposit. The activity list shows the transfer as Scheduled for Fri, Oct 16 by 6:00 AM ET.",
+      say: "\"So is it lost? Did the app mess up?\"",
+      options: [
+        { t: "\"Thanks for waiting, Alex. I don't see the deposit in checking yet, so I'm going to open a case with our transfers team and have them trace where the $1,200 went. They'll follow up within two business days, and I'll give you a reference number.\"", r: "weak",
+          why: "Nothing is wrong, so a trace signals a problem that does not exist and leaves Alex worried for two days. Read the activity status before choosing a path." },
+        { t: "\"Nothing is lost. I can see the transfer, and it's scheduled. Because it was made at 9:15 PM, after our 8:00 PM cutoff, it will arrive tomorrow by 6:00 AM. The money has already left your savings, and it will show in checking when it arrives.\"", r: "strong",
+          why: "You gave the answer first, then the rule, then the exact timing, all in plain words." },
+        { t: "\"I can see the transfer in your account and it's marked as pending, so it's in progress. These usually clear soon, so you should see it in checking before long. I'd just keep an eye on the app and call us back if it hasn't shown up by tomorrow.\"", r: "mixed",
+          why: "Right direction, but vague. \"Pending\" and \"before long\" leave Alex guessing, and the app says Scheduled. Give the exact status and time." }
+      ]
+    },
+    {
+      title: "Explain why money left first",
+      ctx: "Alex relaxes a little, then asks the question many customers ask.",
+      say: "\"But why is it already out of savings if it hasn't arrived in checking? That feels wrong.\"",
+      options: [
+        { t: "\"I understand it feels odd. Overnight transfers go through our settlement window, where the amount is reserved on the ledger of the sending account and then posted to the receiving account in the next batch, which is why the balances change at different times.\"", r: "mixed",
+          why: "Accurate, but full of internal terms. Alex cannot repeat it to anyone. Translate the process into what it does for the customer." },
+        { t: "\"I understand the frustration, and a lot of customers ask this. It's how our system is set up, and it's the same for every transfer after the cutoff, so there isn't a setting I can change. I can send you our transfer guide if you want the details.\"", r: "weak",
+          why: "It never gives the reason and points to a document instead. People accept rules they understand." },
+        { t: "\"That's a fair question. When a transfer is scheduled, we hold the money in the sending account right away so it can't be spent twice before it lands. Then it moves to checking at the scheduled time, so your funds are protected the whole way.\"", r: "strong",
+          why: "You validated the question and gave the reason in plain words. The reason is about protecting the customer, not about the system." }
+      ]
+    },
+    {
+      title: "Handle the deadline",
+      ctx: "Alex's rent of $1,150 is set to be paid from Checking tomorrow morning. Checking shows $748.60 available right now. The scheduled transfer arrives by 6:00 AM, and the rent payment processes at 9:00 AM.",
+      say: "\"My rent comes out of checking tomorrow morning. Will it bounce?\"",
+      options: [
+        { t: "\"I'm fairly confident it will be fine, because the transfer is scheduled for early tomorrow and rent usually processes later in the day. If you want extra peace of mind, you could keep a little extra in checking after the transfer lands.\"", r: "mixed",
+          why: "Reassuring and probably right, but it relied on \"usually\" instead of the two actual times. Cite 6:00 AM and 9:00 AM." },
+        { t: "\"I can cancel the scheduled transfer and you can redo it in the morning when the app is open, so you control the timing. Canceling releases the hold on your savings right away, and then you'd move the money again before rent goes out.\"", r: "weak",
+          why: "This adds risk for no benefit. The scheduled transfer already arrives before rent processes. Canceling makes Alex responsible for remembering to redo it in the morning, and if they forget, rent fails." },
+        { t: "\"Let me check the timing so you're not relying on a guess. Your transfer arrives by 6:00 AM and your rent payment processes at 9:00 AM, so the money will be in checking first. If you'd like to see it yourself, check the balance in the app around 7:00 AM.\"", r: "strong",
+          why: "You checked the actual sequence, answered the real concern, and gave Alex a way to confirm it." }
+      ]
+    },
+    {
+      title: "Close the call",
+      ctx: "Alex is calm. You want to prevent a repeat call and confirm the issue is resolved.",
+      say: "\"Okay, I think I'm good. Anything else I should know?\"",
+      options: [
+        { t: "\"Before you go, a tip for next time. Transfers made after 8:00 PM take until the next morning, so it's best to do them earlier in the day. That way you won't be stuck wondering where your money is. Anything else I can help with tonight?\"", r: "weak",
+          why: "The information is useful, but \"it's best to do them earlier\" reads as a correction of Alex. Share the cutoff as information: before 8:00 PM arrives instantly." },
+        { t: "\"You're all set, Alex. Your transfer arrives by 6:00 AM, your rent is covered, and I've noted this call on your account in case you need it. Thanks for calling Fundly, and have a good night.\"", r: "mixed",
+          why: "A clean, friendly close, but it missed the chance to share the cutoff rule. A 10 second tip often saves a whole call." },
+        { t: "\"To recap, your transfer arrives by 6:00 AM tomorrow and your rent is covered. For next time, transfers made before 8:00 PM arrive instantly. Is there anything else I can help with tonight?\"", r: "strong",
+          why: "A short recap, plus the one rule that prevents the next call, plus a check for other needs before ending." }
+      ]
+    }
+  ];
+
+  var app = document.getElementById("app");
+  var st;
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+  function intro() {
+    app.innerHTML =
+      '<header style="display:grid;gap:10px"><p class="mono">Agent practice simulation</p><h1>The transfer that "disappeared"</h1>' +
+      '<p class="muted">You are a Fundly support agent. A customer calls at 9:40 PM because money they moved between their own accounts is not showing. Make five choices. You will see how you did at the end.</p></header>' +
+      '<section class="panel"><h2>Learning objectives</h2><ul>' +
+      '<li>Verify identity before discussing account details.</li>' +
+      '<li>Read account activity to find the cause before answering.</li>' +
+      '<li>Explain a rule in plain words, with the reason behind it.</li>' +
+      '<li>Check the real timeline before reassuring a customer.</li>' +
+      '<li>Close with a recap and one tip that prevents the next call.</li></ul></section>' +
+      '<section class="panel"><h2>Case file</h2><p>' + esc(CASE) + '</p><p class="muted">Time: about 4 minutes.</p></section>' +
+      '<button class="cta" id="go">Start the call</button>' +
+      foot();
+    document.getElementById("go").addEventListener("click", function () { st = { i: 0, score: 0, log: [], order: SCENES.map(function (sc) { return { title: sc.title, ctx: sc.ctx, say: sc.say, options: shuffle(sc.options.slice()) }; }) }; scene(); });
+  }
+
+  function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function foot() { return '<footer>Fictional scenario created for demonstration. Fundly, the customer, and all rules are invented and do not describe a real company or policy. Designed by Daniel Cooperider.</footer>'; }
+
+  function scene() {
+    var s = st.order[st.i], pct = (st.i / SCENES.length) * 100;
+    app.innerHTML =
+      '<div class="meta"><span class="mono">Moment ' + (st.i + 1) + ' of ' + SCENES.length + '</span></div>' +
+      '<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '"><i style="width:' + pct + '%"></i></div>' +
+      '<h2>' + esc(s.title) + '</h2>' +
+      '<div class="ctx"><b>What you see</b><span>' + esc(s.ctx) + '</span></div>' +
+      '<p class="say">' + esc(s.say) + '</p>' +
+      '<p class="mono">What do you say?</p>' +
+      '<div class="opts" id="opts">' + s.options.map(function (o, k) { return '<button type="button" class="opt" data-k="' + k + '">' + esc(o.t) + '</button>'; }).join("") + '</div>' +
+      '<div id="fb" aria-live="polite"></div>' + foot();
+    app.querySelectorAll(".opt").forEach(function (b) { b.addEventListener("click", function () { choose(+b.dataset.k); }); });
+    window.scrollTo(0, 0);
+  }
+
+  function choose(k) {
+    var s = st.order[st.i], o = s.options[k];
+    var best = SCENES[st.i].options.filter(function (x) { return x.r === "strong"; })[0];
+    st.score += POINTS[o.r]; st.log.push({ title: s.title, r: o.r, t: o.t, why: o.why, best: best.t });
+    if (st.i === SCENES.length - 1) summary(); else { st.i++; scene(); }
+  }
+
+  function summary() {
+    var max = SCENES.length * 2, pct = Math.round((st.score / max) * 100);
+    var msg = pct >= 80 ? "Strong call. The customer left clear and calm." : pct >= 50 ? "Solid base. A few answers left the customer guessing." : "Good practice. Review the explanations below and try again.";
+    app.innerHTML =
+      '<header style="display:grid;gap:10px"><p class="mono">Call summary</p><p class="score">' + st.score + ' / ' + max + '</p><p>' + msg + '</p></header>' +
+      '<section class="panel"><h2>Moment by moment</h2><div style="display:grid;gap:14px">' + st.log.map(function (l, n) { return '<div class="fb ' + l.r + '"><span class="tag">Moment ' + (n + 1) + ': ' + esc(l.title) + ' · ' + LABEL[l.r] + '</span><p><b>You said: </b>' + esc(l.t) + '</p><p>' + esc(l.why) + '</p>' + (l.r !== "strong" ? '<p><b>Stronger approach: </b>' + esc(l.best) + '</p>' : '') + '</div>'; }).join("") + '</div></section>' +
+      '<section class="panel"><h2>Three habits to keep</h2><ul>' +
+      '<li><b>Answer the worry first.</b> Say whether the money is safe, then explain.</li>' +
+      '<li><b>Give the reason, not just the rule.</b> The hold exists so money cannot be spent twice.</li>' +
+      '<li><b>Prove it with times.</b> "Arrives by 6:00 AM, rent runs at 9:00 AM" beats "should be fine."</li></ul></section>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="cta" id="again">Try again</button></div>' + foot();
+    document.getElementById("again").addEventListener("click", intro);
+    window.scrollTo(0, 0);
+  }
+
+  intro();
+})();
+</script>
